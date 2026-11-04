@@ -1,0 +1,10 @@
+aiogram
+aiosqlite
+sqlalchemy[asyncio]
+openai
+python-dotenv
+matplotlib
+aiohttp
+
+# Optional async PostgreSQL driver (used when DATABASE_URL points to Postgres)
+asyncpg

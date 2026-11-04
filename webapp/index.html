@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GymPilot</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--tg-theme-bg-color, #1a1a2e);
+            color: var(--tg-theme-text-color, #eee);
+            padding: 16px;
+            min-height: 100vh;
+        }
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .header h1 {
+            font-size: 28px;
+            background: linear-gradient(135deg, #00f260, #0575e6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header p { color: #888; margin-top: 4px; }
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 16px 0;
+        }
+        .stat-card {
+            background: var(--tg-theme-secondary-bg-color, #16213e);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #00f260;
+        }
+        .stat-card .label {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .section {
+            background: var(--tg-theme-secondary-bg-color, #16213e);
+            border-radius: 16px;
+            padding: 16px;
+            margin: 12px 0;
+        }
+        .section h2 {
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+        .workout-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #333;
+        }
+        .workout-item:last-child { border: none; }
+        .btn {
+            background: linear-gradient(135deg, #00f260, #0575e6);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            margin: 8px 0;
+            cursor: pointer;
+        }
+        .btn:active { opacity: 0.8; }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #00f260;
+            color: #00f260;
+        }
+        .progress-bar {
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00f260, #0575e6);
+            border-radius: 4px;
+            transition: width 0.5s;
+        }
+        .nav {
+            display: flex;
+            justify-content: space-around;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--tg-theme-secondary-bg-color, #16213e);
+            padding: 12px;
+            border-top: 1px solid #333;
+        }
+        .nav-item {
+            text-align: center;
+            color: #888;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .nav-item.active { color: #00f260; }
+        .nav-item .icon { font-size: 22px; }
+        .timer-display {
+            font-size: 64px;
+            font-weight: 700;
+            text-align: center;
+            padding: 30px;
+            color: #00f260;
+        }
+        .timer-btns {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+        .timer-btns .btn { width: auto; padding: 10px 20px; }
+        .hidden { display: none; }
+        .achievement {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+        }
+        .achievement .badge { font-size: 32px; }
+        .achievement .info { flex: 1; }
+        .achievement .info .name { font-weight: 600; }
+        .achievement .info .desc { font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+    <!-- ГЛАВНАЯ -->
+    <div id="page-home">
+        <div class="header">
+            <h1>💪 GymPilot</h1>
+            <p>Твой ИИ-тренер</p>
+        </div>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="value" id="user-level">1</div>
+                <div class="label">Уровень</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="user-xp">0</div>
+                <div class="label">XP</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="user-streak">0</div>
+                <div class="label">Дней подряд 🔥</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="user-calories">—</div>
+                <div class="label">Ккал/день</div>
+            </div>
+        </div>
+        <div class="section">
+            <h2>📊 Прогресс к цели</h2>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 35%"></div>
+            </div>
+            <p style="font-size:12px;color:#888;margin-top:6px">35% до цели</p>
+        </div>
+        <button class="btn" onclick="showPage('workout')">🏋️ Начать тренировку</button>
+        <button class="btn btn-outline" onclick="showPage('timer')">⏱ Таймер отдыха</button>
+    </div>
+
+    <!-- ТРЕНИРОВКА -->
+    <div id="page-workout" class="hidden">
+        <div class="header"><h1>🏋️ Тренировка</h1></div>
+        <div class="section">
+            <h2>Сегодня: PUSH</h2>
+            <div class="workout-item">
+                <span>Жим лёжа</span><span>4×8</span>
+            </div>
+            <div class="workout-item">
+                <span>Жим наклонная</span><span>3×10</span>
+            </div>
+            <div class="workout-item">
+                <span>Жим стоя</span><span>3×10</span>
+            </div>
+            <div class="workout-item">
+                <span>Махи в стороны</span><span>4×12</span>
+            </div>
+            <div class="workout-item">
+                <span>Разгибания</span><span>3×12</span>
+            </div>
+        </div>
+        <button class="btn" onclick="showPage('timer')">⏱ Таймер</button>
+        <button class="btn btn-outline" onclick="showPage('home')">⬅️ Назад</button>
+    </div>
+
+    <!-- ТАЙМЕР -->
+    <div id="page-timer" class="hidden">
+        <div class="header"><h1>⏱ Таймер</h1></div>
+        <div class="timer-display" id="timer-display">1:30</div>
+        <div class="timer-btns">
+            <button class="btn" onclick="setTimer(30)">30с</button>
+            <button class="btn" onclick="setTimer(60)">60с</button>
+            <button class="btn" onclick="setTimer(90)">90с</button>
+            <button class="btn" onclick="setTimer(120)">2м</button>
+        </div>
+        <br>
+        <button class="btn" id="timer-start" onclick="toggleTimer()">▶ Старт</button>
+        <button class="btn btn-outline" onclick="showPage('home')">⬅️ Назад</button>
+    </div>
+
+    <!-- ДОСТИЖЕНИЯ -->
+    <div id="page-achieve" class="hidden">
+        <div class="header"><h1>🏆 Достижения</h1></div>
+        <div class="section">
+            <div class="achievement">
+                <div class="badge">🏋️</div>
+                <div class="info"><div class="name">Первая тренировка</div><div class="desc">Составь программу</div></div>
+            </div>
+            <div class="achievement">
+                <div class="badge">🔥</div>
+                <div class="info"><div class="name">7 дней подряд</div><div class="desc">Не пропускай</div></div>
+            </div>
+            <div class="achievement">
+                <div class="badge">⭐</div>
+                <div class="info"><div class="name">Уровень 5</div><div class="desc">Набери 2000 XP</div></div>
+            </div>
+        </div>
+        <button class="btn btn-outline" onclick="showPage('home')">⬅️ Назад</button>
+    </div>
+
+    <!-- НАВИГАЦИЯ -->
+    <div class="nav">
+        <div class="nav-item active" onclick="showPage('home')"><div class="icon">🏠</div>Главная</div>
+        <div class="nav-item" onclick="showPage('workout')"><div class="icon">🏋️</div>Тренировка</div>
+        <div class="nav-item" onclick="showPage('timer')"><div class="icon">⏱</div>Таймер</div>
+        <div class="nav-item" onclick="showPage('achieve')"><div class="icon">🏆</div>Цели</div>
+    </div>
+
+    <script>
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.expand();
+            tg.setHeaderColor('#1a1a2e');
+            tg.setBackgroundColor('#1a1a2e');
+        }
+
+        function showPage(name) {
+            document.querySelectorAll('[id^="page-"]').forEach(p => p.classList.add('hidden'));
+            document.getElementById('page-' + name).classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        }
+
+        let timerSec = 90, timerInterval = null, timerRunning = false;
+
+        function setTimer(s) {
+            timerSec = s; timerRunning = false;
+            clearInterval(timerInterval);
+            updateTimerDisplay();
+            document.getElementById('timer-start').textContent = '▶ Старт';
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(timerSec / 60);
+            const s = timerSec % 60;
+            document.getElementById('timer-display').textContent = m + ':' + String(s).padStart(2, '0');
+        }
+
+        function toggleTimer() {
+            if (timerRunning) {
+                clearInterval(timerInterval);
+                timerRunning = false;
+                document.getElementById('timer-start').textContent = '▶ Старт';
+            } else {
+                timerRunning = true;
+                document.getElementById('timer-start').textContent = '⏸ Пауза';
+                timerInterval = setInterval(() => {
+                    timerSec--;
+                    updateTimerDisplay();
+                    if (timerSec <= 0) {
+                        clearInterval(timerInterval);
+                        timerRunning = false;
+                        document.getElementById('timer-display').textContent = '🔥 GO!';
+                        document.getElementById('timer-start').textContent = '▶ Старт';
+                        if (tg) tg.HapticFeedback?.notificationOccurred('success');
+                    }
+                }, 1000);
+            }
+        }
+
+        updateTimerDisplay();
+    </script>
+</body>
+</html>
